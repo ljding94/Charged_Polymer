@@ -814,7 +814,7 @@ double charged_polymer::calc_Hard_Sphere_Yukawa_of_two_r(std::vector<double> r1,
     {
         return INF;
     }
-    if (Epar.invK == 0 || r > 5.0 / Epar.invK)
+    if (Epar.invK == 0 || r > 5.0*Epar.invK)
     {
         return 0;
     }
@@ -879,7 +879,6 @@ void charged_polymer::run_simultion(int therm_sweep, int MC_sweeps, int step_per
     }
 
     // data collection run
-    // TODO: consider implementing irreversible algorithem like event-chain here if too slow
     std::cout << "\n";
     if (beta != 1)
     {
@@ -909,5 +908,5 @@ void charged_polymer::run_simultion(int therm_sweep, int MC_sweeps, int step_per
     save_polymer_to_file(folder + "/config_" + finfo + ".csv");
     // save_observable_to_file(folder + "/obs_MC_" + finfo + ".csv", obs_ensemble, true);
     save_observable_to_file(folder + "/obs_" + finfo + ".csv", obs_ensemble, false);
-    save_observable_to_file(folder + "/obs_MC" + finfo + ".csv", obs_ensemble, true);
+    save_observable_to_file(folder + "/obs_MC_" + finfo + ".csv", obs_ensemble, true);
 }
