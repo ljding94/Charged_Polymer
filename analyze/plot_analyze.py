@@ -117,6 +117,8 @@ def plot_MC_step(filename, finfo, show=False):
 
 
 def plot_obs(folder, finfos, parameters, xparam, tag=""):
+    xtex = {"L": r"$L$", "kappa": r"$\kappa$", "A": r"$A$", "invK": r"$1/K$"}
+
     fig, axs = plt.subplots(1, 5, figsize=(15, 3))
     xpar = []
     all_R2, all_R2_err = [], []
@@ -150,10 +152,10 @@ def plot_obs(folder, finfos, parameters, xparam, tag=""):
         else:
             raise ValueError(f"Unknown xparam={xparam}")
 
-        all_R2.append(R2/L)
-        all_R2_err.append(R2_err/L)
-        all_Rg2.append(Rg2/L)
-        all_Rg2_err.append(Rg2_err/L)
+        all_R2.append(R2 / L)
+        all_R2_err.append(R2_err / L)
+        all_Rg2.append(Rg2 / L)
+        all_Rg2_err.append(Rg2_err / L)
 
         all_Sq.append(Sq)
         all_qB.append(qB)
@@ -163,11 +165,11 @@ def plot_obs(folder, finfos, parameters, xparam, tag=""):
     axs[0].errorbar(xpar, all_R2, yerr=all_R2_err, marker="+", label=r"$R^2/L$")
     axs[1].errorbar(xpar, all_Rg2, yerr=all_Rg2_err, marker="x", label=r"$R_g^2/L$")
 
-    axs[0].set_xlabel(xparam)
+    axs[0].set_xlabel(xtex[xparam])
     axs[0].set_ylabel("")
     axs[0].legend()
 
-    axs[1].set_xlabel(xparam)
+    axs[1].set_xlabel(xtex[xparam])
     axs[1].set_ylabel("")
     axs[1].legend()
 
@@ -177,42 +179,35 @@ def plot_obs(folder, finfos, parameters, xparam, tag=""):
     axs[2].loglog(all_qB[0], Sq_rod, "k--", label="rod")
     axs[2].set_xlabel("qB")
     axs[2].set_ylabel("S(qB)")
-    axs[2].legend(title=xparam, ncol=2)
+    axs[2].legend(title=xtex[xparam], ncol=2)
 
-    all_alpha, all_alpha_err = [], []
-    all_lam1, all_lam1_err = [], []
-    all_lam2, all_lam2_err = [], []
+    all_lam1 = []
+    all_lam2 = []
     all_lam0 = []
     for i in range(len(all_tts)):
-        #if np.isnan(all_tts[i]).any():
+        # if np.isnan(all_tts[i]).any():
         #    print(f"NaN values found in all_tts[{i}] with parameters: {parameters[i]}")
         L, kappa, A, invK = parameters[i]
         lentts = min(len(all_tts[i]), L - 1)
-        popt, pcov = fit_two_scale_persistence(all_spB[i][:lentts], all_tts[i][:lentts])
-        alpha, lam1, lam2 = popt
-        print("fitted two scale", popt)
-        alpha_err, lam1_err, lam2_err = np.sqrt(np.diag(pcov))
-        all_alpha.append(alpha)
-        all_alpha_err.append(alpha_err)
+        lam0, lam1, lam2 = get_all_peristence_lengths(all_spB[i][:lentts], all_tts[i][:lentts], invK)
+        all_lam0.append(lam0)
         all_lam1.append(lam1)
-        all_lam1_err.append(lam1_err)
         all_lam2.append(lam2)
-        all_lam2_err.append(lam2_err)
-        all_lam0.append(-1/np.log(all_tts[i][1]))
         # axs[2].semilogy(all_spB[i][:20], all_tts[i][:20], "s", mfc="None", label=rf"{xpar[i]}")
-        axs[3].semilogy(all_spB[i], all_tts[i], "s", mfc="None", label=rf"{xpar[i]}")
-        axs[3].semilogy(all_spB[i], tts_two_scale(all_spB[i], alpha, lam1, lam2), "--", color=axs[2].lines[-1].get_color())
+        axs[3].plot(all_spB[i], all_tts[i], "s", mfc="None", label=rf"{xpar[i]}")
+        # axs[3].plot(all_spB[i], tts_two_scale(all_spB[i], alpha, lam1, lam2), "--", color=axs[2].lines[-1].get_color())
 
     axs[3].set_xlabel(r"$s/B$")
     axs[3].set_ylabel(r"$\left<\cos{\theta}(s)\right>$")
-    axs[3].legend(title=xparam, ncol=2)
+    axs[3].legend(title=xtex[xparam], ncol=2)
 
-    axs[4].plot(xpar, all_lam0, "--", label=r"$\lambda_0$")
+    axs[4].loglog(xpar, all_lam0, marker="v", label=r"$\lambda_0$")
     print("all_lam0", all_lam0)
     print("all_lam1", all_lam1)
-    axs[4].errorbar(xpar, all_lam1, yerr=all_lam1_err, marker="o", label=r"$\lambda_1$")
-    axs[4].errorbar(xpar, all_lam2, yerr=all_lam2_err, marker="s", label=r"$\lambda_2$")
-    axs[4].set_xlabel(xparam)
+    print("all_lam2", all_lam2)
+    axs[4].loglog(xpar, all_lam1, marker="o", label=r"$\lambda_1$")
+    axs[4].loglog(xpar, all_lam2, marker="s", label=r"$\lambda_2/\beta$")
+    axs[4].set_xlabel(xtex[xparam])
     axs[4].set_ylabel(r"persistance length")
     axs[4].legend()
 
@@ -235,13 +230,39 @@ def calc_Sq_discrete_infinite_thin_rod(q, L):
 
 
 def tts_two_scale(s, alpha, lam1, lam2):
-    tts = (1 - alpha) * np.exp(-s / lam1) + alpha * np.exp(-s / lam2)
+    #tts = (1 - alpha) * np.exp(-s / lam1) + alpha * np.exp(-s / lam2)
+    tts = 1 - (1 - alpha) * s / lam1 + alpha * (np.exp(-s / lam2) - 1)
     return tts
 
 
 def fit_two_scale_persistence(spB, tts):
-    popt, pcov = curve_fit(tts_two_scale, spB, tts)
+    bounds = (0, [1.0, np.inf, np.inf])
+    popt, pcov = curve_fit(tts_two_scale, spB, tts, bounds=bounds)
     return popt, pcov
+
+
+def tts_one_scale(s, lam0):
+    tts = np.exp(-s / lam0)
+    return tts
+
+
+def fit_one_scale_persistence(spB, tts):
+    popt, pcov = curve_fit(tts_one_scale, spB, tts)
+    return popt, pcov
+
+
+def get_all_peristence_lengths(spB, tts, invK):
+    # fit one scale for invK < 6
+    lam0, lam1, lam2 = np.nan, np.nan, np.nan
+    #if invK <= 6:
+    popt, pcov = fit_one_scale_persistence(spB[:6], tts[:6])
+    lam0 = popt[0]
+    if invK >= 3:
+        popt, pcov = fit_two_scale_persistence(spB, tts)
+        alpha, lam1, lam2 = popt[0], popt[1], popt[2]
+        #lam1, lam2 = np.max([lam1, lam2]),np.min([lam1, lam2])
+        lam2 = lam2/alpha
+    return lam0, lam1, lam2
 
 
 def plot_R_distribution(filename):
@@ -266,7 +287,6 @@ def plot_R_distribution(filename):
     # plt.savefig(filename.replace(".csv", ".png"))
     plt.show()
     plt.close()
-
 
 
 def calc_structure_factor(X, Y, r):

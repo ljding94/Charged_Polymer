@@ -19,16 +19,16 @@ def main():
     # plot_MC_step(folder+"/obs_MC_L50_kappa10.0_f0.0_g0.0.csv", "", True)
     # return 0
 
-    folder = "../data/20241111"
-    L = 100
+    folder = "../data/20241114"
+    L = 500
     kappa = 5.0
     A = 1.0
     parameters = []
     finfos = []
-    for kappa in [2.0, 5.0, 10.0]:
+    for kappa in [5.0, 10.0]:
         parameters = []
         finfos = []
-        for invK in [1.0, 2.0, 5.0, 10.0, 20.0]:
+        for invK in [1.0, 2.0, 4.0, 6.0, 8.0, 10.0, 15.0, 20.0, 40.0]:
             finfo = f"L{L}_kappa{kappa:.1f}_A{A:.1f}_invK{invK:.1f}"
             obs_filename = folder + f"/obs_{finfo}.csv"
             if not os.path.exists(obs_filename):
@@ -37,9 +37,9 @@ def main():
             finfos.append(finfo)
             # plot_polymer_config(folder+f"/config_{finfo}.csv", finfo, True)
             #plot_polymer_config(folder + f"/config_{finfo}.csv", finfo)
-            plot_multi_config(folder, finfo)
+            #plot_multi_config(folder, finfo)
             # plot_MC_step(folder+f"/obs_MC_{finfo}.csv", finfo)
-        plot_obs(folder, finfos, parameters, "invK", f"_kappa{kappa}")
+        plot_obs(folder, finfos, parameters, "invK", f"_kappa{kappa}_A{A}")
     return 0
 
     folder = "../data/20240820"

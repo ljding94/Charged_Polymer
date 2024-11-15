@@ -29,8 +29,8 @@ charged_polymer::charged_polymer(double L_, Energy_parameter Epar_, bool random_
     if (random_Epar)
     {
         Epar.kappa = 2 + 18 * rand_uni(gen);
-        Epar.A = 1 + 19 * rand_uni(gen);
-        Epar.invK = (0.02 + 0.48 * rand_uni(gen));
+        Epar.A = 10 * rand_uni(gen);
+        Epar.invK = 2 + 18 * rand_uni(gen);
     }
     else
     {
@@ -814,7 +814,7 @@ double charged_polymer::calc_Hard_Sphere_Yukawa_of_two_r(std::vector<double> r1,
     {
         return INF;
     }
-    if (Epar.invK == 0 || r > 5.0*Epar.invK)
+    if (Epar.invK == 0 || r > 5.0 * Epar.invK)
     {
         return 0;
     }

@@ -54,10 +54,10 @@ int main(int argc, char const *argv[])
         int MC_sweeps;
         int step_per_sweep;
 
-        bin_num = 51;
-        therm_sweeps = 500;      // 1500
-        MC_sweeps = 1000;        // 3000
-        step_per_sweep = 10 * L; // 100 * L;
+        bin_num = 100;
+        therm_sweeps = 2000;      // 1500
+        MC_sweeps = 4000;        // 3000
+        step_per_sweep = L; // 100 * L;
 
         // polymer.save_polymer_to_file(folder + "/config_" + finfo + "_init.csv");
         polymer.save_polymer_to_file(folder + "/config_init_" + finfo + ".csv"); // save sample polymer
@@ -76,10 +76,10 @@ int main(int argc, char const *argv[])
         int MC_sweeps;
         int step_per_sweep;
 
-        bin_num = 51;
-        therm_sweeps = 1500;
-        MC_sweeps = 3000;
-        step_per_sweep = 100 * L;
+        bin_num = 100;
+        therm_sweeps = 2000;
+        MC_sweeps = 4000;
+        step_per_sweep = L;
 
         // polymer.save_polymer_to_file(folder + "/config_" + finfo + "_init.csv");
         polymer.save_polymer_to_file(folder + "/config_init_" + finfo + ".csv"); // save sample polymer
@@ -93,7 +93,7 @@ int main(int argc, char const *argv[])
 
     std::clock_t c_end = std::clock();
     double time_elapsed = static_cast<double>(c_end - c_start) / CLOCKS_PER_SEC;
-    std::cout << "Time elapsed: " << time_elapsed << " seconds" << std::endl;
+    std::cout << finfo << ": Time elapsed: " << time_elapsed << " seconds" << std::endl;
 
     return 0;
 }
