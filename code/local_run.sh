@@ -15,7 +15,7 @@ do
         for invK in 1.0 2.0 5.0 10.0 20.0
         do
             echo "Running L=$L kappa=$kappa, A=$A, invK=$invK"
-            nohup ./charged_polymer $L $kappa $A $invK 1 ~/Work/Charged_Polymer/data_hpc/data_pool &
+            nohup ./charged_polymer $L $kappa $A $invK 1 ~/Work/charged_polymer/data_hpc/data_pool &
         done
     done
 done

@@ -29,7 +29,7 @@ charged_polymer::charged_polymer(double L_, Energy_parameter Epar_, bool random_
     if (random_Epar)
     {
         Epar.kappa = 2 + 18 * rand_uni(gen);
-        Epar.A = 10 * rand_uni(gen);
+        Epar.A = 5 * rand_uni(gen);
         Epar.invK = 2 + 18 * rand_uni(gen);
     }
     else
@@ -908,5 +908,5 @@ void charged_polymer::run_simultion(int therm_sweep, int MC_sweeps, int step_per
     save_polymer_to_file(folder + "/config_" + finfo + ".csv");
     // save_observable_to_file(folder + "/obs_MC_" + finfo + ".csv", obs_ensemble, true);
     save_observable_to_file(folder + "/obs_" + finfo + ".csv", obs_ensemble, false);
-    save_observable_to_file(folder + "/obs_MC_" + finfo + ".csv", obs_ensemble, true);
+    //save_observable_to_file(folder + "/obs_MC_" + finfo + ".csv", obs_ensemble, true);
 }

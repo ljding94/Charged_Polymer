@@ -63,11 +63,12 @@ int main(int argc, char const *argv[])
         polymer.save_polymer_to_file(folder + "/config_init_" + finfo + ".csv"); // save sample polymer
         polymer.run_simultion(therm_sweeps, MC_sweeps, step_per_sweep, folder, finfo, bin_num, save_more_config);
     }
-    else if (argc == 4)
+    else if (argc == 5)
     {
         L = std::atoi(argv[1]);
         n_index = std::atoi(argv[2]);
-        folder = argv[3];
+        save_more_config = std::atoi(argv[3]);
+        folder = argv[4];
         charged_polymer polymer(L, Epar, 1);
         finfo = "L" + std::string(argv[1]) + "_random_run" + std::string(argv[2]);
 
