@@ -181,21 +181,30 @@ def plot_obs(folder, finfos, parameters, xparam, tag=""):
     axs[2].set_ylabel("S(qB)")
     axs[2].legend(title=xtex[xparam], ncol=2)
 
+    all_lam0 = []
+    all_alpha = []
     all_lam1 = []
     all_lam2 = []
-    all_lam0 = []
     for i in range(len(all_tts)):
         # if np.isnan(all_tts[i]).any():
         #    print(f"NaN values found in all_tts[{i}] with parameters: {parameters[i]}")
         L, kappa, A, invK = parameters[i]
         lentts = min(len(all_tts[i]), L - 1)
-        lam0, lam1, lam2 = get_all_peristence_lengths(all_spB[i][:lentts], all_tts[i][:lentts], invK)
+        lam0, alpha, lam1, lam2 = get_all_peristence_lengths(all_spB[i][:lentts], all_tts[i][:lentts], invK)
         all_lam0.append(lam0)
+        all_alpha.append(alpha)
         all_lam1.append(lam1)
         all_lam2.append(lam2)
         # axs[2].semilogy(all_spB[i][:20], all_tts[i][:20], "s", mfc="None", label=rf"{xpar[i]}")
-        axs[3].plot(all_spB[i], all_tts[i], "s", mfc="None", label=rf"{xpar[i]}")
+        axs[3].plot(all_spB[i], all_tts[i], "s", mfc="None", ms=3, label=rf"{xpar[i]}")
+        axs[3].plot(all_spB[i], tts_one_scale(all_spB[i], lam0), "--", color=axs[3].lines[-1].get_color())
+        axs[3].plot(all_spB[i], tts_two_scale(all_spB[i], alpha, lam1, lam2), ":", color=axs[3].lines[-1].get_color())
+
         # axs[3].plot(all_spB[i], tts_two_scale(all_spB[i], alpha, lam1, lam2), "--", color=axs[2].lines[-1].get_color())
+
+    all_alpha = np.array(all_alpha)
+    all_lam1 = np.array(all_lam1)
+    all_lam2 = np.array(all_lam2)
 
     axs[3].set_xlabel(r"$s/B$")
     axs[3].set_ylabel(r"$\left<\cos{\theta}(s)\right>$")
@@ -206,7 +215,8 @@ def plot_obs(folder, finfos, parameters, xparam, tag=""):
     print("all_lam1", all_lam1)
     print("all_lam2", all_lam2)
     axs[4].loglog(xpar, all_lam1, marker="o", label=r"$\lambda_1$")
-    axs[4].loglog(xpar, all_lam2, marker="s", label=r"$\lambda_2/\beta$")
+    axs[4].loglog(xpar, all_lam2, marker="s", label=r"$\lambda_2$")
+    axs[4].loglog(xpar, all_lam2 / all_alpha, marker="s", label=r"$\lambda_e=\lambda_2/\beta$")
     axs[4].set_xlabel(xtex[xparam])
     axs[4].set_ylabel(r"persistance length")
     axs[4].legend()
@@ -230,8 +240,8 @@ def calc_Sq_discrete_infinite_thin_rod(q, L):
 
 
 def tts_two_scale(s, alpha, lam1, lam2):
-    #tts = (1 - alpha) * np.exp(-s / lam1) + alpha * np.exp(-s / lam2)
-    tts = 1 - (1 - alpha) * s / lam1 + alpha * (np.exp(-s / lam2) - 1)
+    tts = (1 - alpha) * np.exp(-s / lam1) + alpha * np.exp(-s / lam2)
+    # tts = 1 - (1 - alpha) * s / lam1 + alpha * (np.exp(-s / lam2) - 1)
     return tts
 
 
@@ -253,16 +263,18 @@ def fit_one_scale_persistence(spB, tts):
 
 def get_all_peristence_lengths(spB, tts, invK):
     # fit one scale for invK < 6
-    lam0, lam1, lam2 = np.nan, np.nan, np.nan
-    #if invK <= 6:
+    lam0, alpha, lam1, lam2 = np.nan, np.nan, np.nan, np.nan
+    # if invK <= :
     popt, pcov = fit_one_scale_persistence(spB[:6], tts[:6])
     lam0 = popt[0]
-    if invK >= 3:
+    if invK >= 2:
         popt, pcov = fit_two_scale_persistence(spB, tts)
         alpha, lam1, lam2 = popt[0], popt[1], popt[2]
-        #lam1, lam2 = np.max([lam1, lam2]),np.min([lam1, lam2])
-        lam2 = lam2/alpha
-    return lam0, lam1, lam2
+        if lam1 < lam2:
+            alpha, lam1, lam2 = 1 - alpha, lam2, lam1
+        # lam1, lam2 = np.max([lam1, lam2]),np.min([lam1, lam2])
+        # lame = lam2 / alpha
+    return lam0, alpha, lam1, lam2
 
 
 def plot_R_distribution(filename):

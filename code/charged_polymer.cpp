@@ -819,7 +819,7 @@ double charged_polymer::calc_Hard_Sphere_Yukawa_of_two_r(std::vector<double> r1,
         return 0;
     }
 
-    return Epar.A * std::exp(-(r - 1.0) / Epar.invK);
+    return Epar.A * std::exp(-r / Epar.invK) / r;
 }
 
 double charged_polymer::run_MC_sweep(int step_per_sweep)
@@ -908,5 +908,5 @@ void charged_polymer::run_simultion(int therm_sweep, int MC_sweeps, int step_per
     save_polymer_to_file(folder + "/config_" + finfo + ".csv");
     // save_observable_to_file(folder + "/obs_MC_" + finfo + ".csv", obs_ensemble, true);
     save_observable_to_file(folder + "/obs_" + finfo + ".csv", obs_ensemble, false);
-    //save_observable_to_file(folder + "/obs_MC_" + finfo + ".csv", obs_ensemble, true);
+    // save_observable_to_file(folder + "/obs_MC_" + finfo + ".csv", obs_ensemble, true);
 }
