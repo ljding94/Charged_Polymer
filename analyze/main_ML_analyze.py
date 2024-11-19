@@ -10,10 +10,10 @@ import time
 def main():
 
     print("analyzing data using ML model")
-    folder = "../data/20240924_random"
-    rand_num = 5500
-    rand_max = 4500
-    L = 200
+    folder = "../data/20241117_rand"
+    rand_num = 1000
+    rand_max = 1000
+    L = 500
     parameters = []
     for i in range(rand_num):
         filename = f"{folder}/obs_L{L}_random_run{i}.csv"
@@ -24,9 +24,9 @@ def main():
     print("parameters", parameters)
     print("total number of parameters", len(parameters))
 
-    #calc_svd(folder, parameters)
+    calc_svd(folder, parameters)
     #plot_pddf_acf(folder, parameters, max_z=5, n_bin=100)
-    #return 0
+    return 0
     random.shuffle(parameters)
     parameters_train = parameters[:int(0.7*len(parameters))]
     parameters_test = parameters[int(0.7*len(parameters)):]

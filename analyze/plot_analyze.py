@@ -262,15 +262,18 @@ def fit_one_scale_persistence(spB, tts):
 
 
 def get_all_peristence_lengths(spB, tts, invK):
+    #spB = spB[:50]
+    #tts = tts[:50]
     # fit one scale for invK < 6
     lam0, alpha, lam1, lam2 = np.nan, np.nan, np.nan, np.nan
     # if invK <= :
-    popt, pcov = fit_one_scale_persistence(spB[:6], tts[:6])
+    popt, pcov = fit_one_scale_persistence(spB, tts)
     lam0 = popt[0]
-    if invK >= 2:
+    if invK >= 1:
         popt, pcov = fit_two_scale_persistence(spB, tts)
         alpha, lam1, lam2 = popt[0], popt[1], popt[2]
         if lam1 < lam2:
+        #if alpha > 0.5:
             alpha, lam1, lam2 = 1 - alpha, lam2, lam1
         # lam1, lam2 = np.max([lam1, lam2]),np.min([lam1, lam2])
         # lame = lam2 / alpha

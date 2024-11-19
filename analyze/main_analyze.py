@@ -19,16 +19,16 @@ def main():
     # plot_MC_step(folder+"/obs_MC_L50_kappa10.0_f0.0_g0.0.csv", "", True)
     # return 0
 
-    folder = "../data/20241115"
+    folder = "../data/20241118"
     L = 500
     kappa = 5.0
     A = 1.0
     parameters = []
     finfos = []
-    for L in [100, 200, 500, 1000]:
+    for kappa in [20, 50]:
         parameters = []
         finfos = []
-        for invK in [1.0, 2.0, 3.0, 3.5, 4.0, 4.5, 5.0, 6.0, 10.0]:
+        for invK in [1.0, 2.0, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 10.0, 20.0, 40.0]:
             finfo = f"L{L}_kappa{kappa:.1f}_A{A:.1f}_invK{invK:.1f}"
             obs_filename = folder + f"/obs_{finfo}.csv"
             if not os.path.exists(obs_filename):

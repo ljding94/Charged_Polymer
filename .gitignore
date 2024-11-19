@@ -2,6 +2,7 @@
 !code
 code/*.o
 code/*.out
+code/*.sh
 !analyze
 analyze/__pycache__
 !plot
