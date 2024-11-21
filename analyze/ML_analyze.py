@@ -27,7 +27,7 @@ def get_all_feature_Sq_data(folder, parameters):
         all_A.append(A)
         all_invK.append(invK)
         all_R2.append(R2)
-        all_Rg2.append(Rg2)
+        all_Rg2.append(Rg2/L)
 
         Sq = data[0, 10:]
         all_Sq.append(np.log(Sq))
@@ -35,7 +35,7 @@ def get_all_feature_Sq_data(folder, parameters):
 
     all_feature = np.array([all_kappa, all_A, all_invK, all_R2, all_Rg2])
     all_feature_name = ["kappa", "A", "invK", "R2", "Rg2"]
-    all_feature_tex = [r"$\kappa$", "A", r"$\frac{1}{K}$", r"$R^2$", r"$R_g^2$"]
+    all_feature_tex = [r"$\kappa$", "A", r"$1/K$", r"$R^2$", r"$R_g^2/L$"]
     all_Sq = np.array(all_Sq)
     qB = np.array(qB)
     return all_feature.T, all_feature_name, all_feature_tex, all_Sq, qB
@@ -183,7 +183,7 @@ def calc_Sq_autocorrelation(mu, all_Delta_Sq, max_z, bin_num):
 
 def plot_pddf_acf(folder, parameters, max_z=2, n_bin=100):
 
-    all_features, all_feature_names, all_Sq2D_flatten, qB = get_all_feature_Sq2D_data(folder, parameters)
+    all_feature, all_feature_names, all_Sq2D_flatten, qB = get_all_feature_Sq2D_data(folder, parameters)
 
     p_z, z = calc_Sq_pair_distance_distribution(all_Sq2D_flatten, max_z, n_bin)
 
@@ -193,7 +193,7 @@ def plot_pddf_acf(folder, parameters, max_z=2, n_bin=100):
     acf_data = []
     for i in range(len(all_feature_names)):
         # pass
-        acf_mu, z = calc_Sq_autocorrelation(all_features[:, i], all_Sq2D_flatten, max_z, n_bin)
+        acf_mu, z = calc_Sq_autocorrelation(all_feature[:, i], all_Sq2D_flatten, max_z, n_bin)
         plt.plot(z, acf_mu, label=f"acf_{all_feature_names[i]}")
         acf_data.append(acf_mu)
 
@@ -212,37 +212,35 @@ def plot_pddf_acf(folder, parameters, max_z=2, n_bin=100):
 
 
 def GaussianProcess_optimization(folder, parameters_train):
-    all_features, all_feature_names, all_Sq2D_flatten, qB = get_all_feature_Sq2D_data(folder, parameters_train)
+    all_feature, all_feature_name, all_feature_tex, all_Sq, qB = get_all_feature_Sq_data(folder, parameters_train)
     grid_size = 30
 
     theta_per_feature = {
-        "kappa": (np.logspace(-1, 0, grid_size), np.logspace(-3, -2, grid_size)),
-        # "f": (np.logspace(-1, 0, grid_size), np.logspace(-3, -2, grid_size)),
-        # "gL": (np.logspace(-1, 0, grid_size), np.logspace(-3, -2, grid_size)),
-        # "R2": (np.logspace(0, 0.5, grid_size), np.logspace(-5, -4, grid_size)),
-        # "Rg2": (np.logspace(0.2, 0.4, grid_size), np.logspace(-7, -5, grid_size)),
-        # "Sxz": (np.logspace(0.3, 0.6, grid_size), np.logspace(-7, -5, grid_size)), # to run
+        "kappa": (np.logspace(-3, -1, grid_size), np.logspace(-3, 0, grid_size)),
+        "A": (np.logspace(-3, -1, grid_size), np.logspace(-3, 0, grid_size)),
+        "invK": (np.logspace(-3, -1, grid_size), np.logspace(-3, 0, grid_size)),
+        "Rg2": (np.logspace(-1, 1, grid_size), np.logspace(-11, -9, grid_size)),
     }
 
     # feature normalization
-    all_feature_mean = np.mean(all_features, axis=0)
-    all_feature_std = np.std(all_features, axis=0)
-    all_features = (all_features - all_feature_mean) / all_feature_std
+    all_feature_mean = np.mean(all_feature, axis=0)
+    all_feature_std = np.std(all_feature, axis=0)
+    all_feature = (all_feature - all_feature_mean) / all_feature_std
     all_gp_per_feature = {}
     plt.figure()
-    fig, axs = plt.subplots(1, len(all_feature_names), figsize=(6 * len(all_feature_names), 6))
+    fig, axs = plt.subplots(1, len(all_feature_name), figsize=(6 * len(all_feature_name), 6))
     for feature_name, (theta0, theta1) in theta_per_feature.items():
-        if feature_name not in all_feature_names:
+        if feature_name not in all_feature_name:
             continue
         print("training: ", feature_name)
-        feature_index = all_feature_names.index(feature_name)
+        feature_index = all_feature_name.index(feature_name)
 
-        F_learn = all_Sq2D_flatten
+        F_learn = all_Sq
 
         # witout theta optimization
         kernel = RBF(1) + WhiteKernel(1)
-        gp = GaussianProcessRegressor(kernel=kernel, alpha=0.0, optimizer=None).fit(F_learn, all_features[:, feature_index])
-        # print(" all_features[:, feature_index]", all_features[:, feature_index])
+        gp = GaussianProcessRegressor(kernel=kernel, alpha=0.0, optimizer=None).fit(F_learn, all_feature[:, feature_index])
+        # print(" all_feature[:, feature_index]", all_feature[:, feature_index])
 
         print("GPML kernel: %s" % gp.kernel_)
         gp_theta = np.exp(gp.kernel_.theta)
@@ -251,7 +249,7 @@ def GaussianProcess_optimization(folder, parameters_train):
         print("Log-marginal-likelihood: %.3f" % gp.log_marginal_likelihood(gp.kernel_.theta))
 
         # calc Log likelihood
-        ax = axs[all_feature_names.index(feature_name)]
+        ax = axs[all_feature_name.index(feature_name)]
         Theta0, Theta1 = np.meshgrid(theta0, theta1)
         LML = [[0 for j in range(Theta0.shape[1])] for i in range(Theta0.shape[0])]
         for i in range(Theta0.shape[0]):
@@ -263,7 +261,7 @@ def GaussianProcess_optimization(folder, parameters_train):
         ax.contour(Theta0, Theta1, LML, levels=200)
         # find optimized theta0, theta1, using the above contour as guidanve
         kernel = RBF(theta0[grid_size // 2], (theta0[0], theta0[-1])) + WhiteKernel(theta1[grid_size // 2], (theta1[0], theta1[-1]))
-        gp = GaussianProcessRegressor(kernel=kernel, alpha=0.0, n_restarts_optimizer=10).fit(F_learn, all_features[:, feature_index])
+        gp = GaussianProcessRegressor(kernel=kernel, alpha=0.0, n_restarts_optimizer=10).fit(F_learn, all_feature[:, feature_index])
         all_gp_per_feature[feature_name] = gp
 
         print("GPML kernel: %s" % gp.kernel_)
@@ -289,7 +287,7 @@ def GaussianProcess_optimization(folder, parameters_train):
             pickle.dump(gp, f)
 
     # Save average and standard deviation per feature
-    avg_std_data = np.column_stack((all_feature_names, all_feature_mean, all_feature_std))
+    avg_std_data = np.column_stack((all_feature_name, all_feature_mean, all_feature_std))
     column_names = ["Feature", "Mean", "Std"]
     np.savetxt(f"{folder}/data_feature_avg_std.txt", avg_std_data, delimiter=",", header=",".join(column_names), comments="", fmt="%s")
 
@@ -303,7 +301,7 @@ def GaussianProcess_optimization(folder, parameters_train):
 
 
 def read_gp_and_feature_stats(folder):
-    all_feature_names = ["kappa", "f", "gL", "R2", "Rg2", "Sxx", "Syy", "Szz", "Sxy", "Sxz", "Syz"]
+    all_feature_names = ["kappa", "A", "invK", "Rg2"]
     all_feature_mean = np.genfromtxt(f"{folder}/data_feature_avg_std.txt", delimiter=",", skip_header=1, usecols=1)
     all_feature_std = np.genfromtxt(f"{folder}/data_feature_avg_std.txt", delimiter=",", skip_header=1, usecols=2)
     all_gp_per_feature = {}
@@ -315,14 +313,14 @@ def read_gp_and_feature_stats(folder):
 
 
 def GaussianProcess_prediction(folder, parameters_test, all_feature_mean, all_feature_std, all_gp_per_feature):
-    all_features, all_feature_names, all_Sq2D_flatten, qB = get_all_feature_Sq2D_data(folder, parameters_test)
+    all_feature, all_feature_name, all_feature_tex, all_Sq, qB = get_all_feature_Sq_data(folder, parameters_test)
 
     plt.figure()
 
-    fig, axs = plt.subplots(1, len(all_feature_names), figsize=(6 * len(all_feature_names), 6))
+    fig, axs = plt.subplots(1, len(all_feature_name), figsize=(6 * len(all_feature_name), 6))
     for feature_name, gp in all_gp_per_feature.items():
-        feature_index = all_feature_names.index(feature_name)
-        Y = all_features[:, feature_index]
+        feature_index = all_feature_name.index(feature_name)
+        Y = all_feature[:, feature_index]
 
         print("GPML kernel: %s" % gp.kernel_)
         gp_theta = np.exp(gp.kernel_.theta)  # gp.kernel_.theta return log transformed theta
@@ -330,9 +328,9 @@ def GaussianProcess_prediction(folder, parameters_test, all_feature_mean, all_fe
         print("Kernel parameters:", gp_theta)
         print("Log-marginal-likelihood: %.3f" % gp.log_marginal_likelihood(gp.kernel_.theta))
 
-        Y_predict, Y_predict_err = gp.predict(all_Sq2D_flatten, return_std=True)
+        Y_predict, Y_predict_err = gp.predict(all_Sq, return_std=True)
         # print("np.shape(test_data[:, 0])", np.shape(test_data[:, 0]))
-        print("np.shape(all_Sq2D_flatten)", np.shape(all_Sq2D_flatten))
+        print("np.shape(all_Sq2D_flatten)", np.shape(all_Sq))
         print("np.shape(Y_predict)", np.shape(Y_predict))
 
         Y_predict = Y_predict * all_feature_std[feature_index] + all_feature_mean[feature_index]
@@ -344,8 +342,8 @@ def GaussianProcess_prediction(folder, parameters_test, all_feature_mean, all_fe
         max_val = max(np.max(Y), np.max(Y_predict + Y_predict_err))
         axs[feature_index].set_xlim(min_val, max_val)
         axs[feature_index].set_ylim(min_val, max_val)
-        axs[feature_index].set_xlabel(f"{feature_name}")
-        axs[feature_index].set_ylabel(f"{feature_name} Prediction")
+        axs[feature_index].set_xlabel(f"{all_feature_tex[feature_index]}")
+        axs[feature_index].set_ylabel(f"{all_feature_tex[feature_index]} Prediction")
 
         # save data to file
         data = np.column_stack((Y, Y_predict, Y_predict_err))
@@ -367,9 +365,9 @@ def fit_Rg2(q, Sq):
 
 
 def calc_Sq_fitted_Rg2(folder, parameters_test, all_feature_names):
-    segment_type, all_features, all_feature_names, all_Sq, all_Sq_err, q = read_Sq_data(folder, parameters_test)
+    segment_type, all_feature, all_feature_names, all_Sq, all_Sq_err, q = read_Sq_data(folder, parameters_test)
 
-    MC_Rg2 = all_features[:, all_feature_names.index("Rg2")]
+    MC_Rg2 = all_feature[:, all_feature_names.index("Rg2")]
     # qfns = [10,20,30,40]
     qfns = [50, 55, 60, 65, 70]
     Rg2s = []

@@ -13,7 +13,6 @@ charged_polymer::charged_polymer(double L_, Energy_parameter Epar_, bool random_
 {
     // system related
     beta = 1;
-    L = L_;
 
     // set energy related
     // geometric
@@ -28,12 +27,14 @@ charged_polymer::charged_polymer(double L_, Energy_parameter Epar_, bool random_
 
     if (random_Epar)
     {
-        Epar.kappa = 2 + 18 * rand_uni(gen);
-        Epar.A = 5 * rand_uni(gen);
-        Epar.invK = 2 + 18 * rand_uni(gen);
+        L = 200 + int(200 * rand_uni(gen));
+        Epar.kappa = 10 + 40 * rand_uni(gen);
+        Epar.A = 10 * rand_uni(gen);
+        Epar.invK = 5 + 25 * rand_uni(gen);
     }
     else
     {
+        L = L_;
         Epar.kappa = Epar_.kappa;
         Epar.A = Epar_.A;
         Epar.invK = Epar_.invK;
@@ -632,8 +633,8 @@ observable charged_polymer::measure_observable(int bin_num)
     obs.qB.resize(bin_num);
     obs.Sq.resize(bin_num);
 
-    double qB_i = 0.1 / L;   // 0.2*M_PI/L; //0.1/L; ;
-    double qB_f = 100.0 / L; // M_PI;//100.0/L; //M_PI;
+    double qB_i = 1e-3; // 0.1 / L;   // 0.2*M_PI/L; //0.1/L; ;
+    double qB_f = 1;    // 100.0 / L; // M_PI;//100.0/L; //M_PI;
     for (int k = 0; k < bin_num; k++)
     {
         obs.qB[k] = qB_i * std::pow(qB_f / qB_i, 1.0 * k / (bin_num - 1)); // uniform in log scale
