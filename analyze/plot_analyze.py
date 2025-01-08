@@ -171,7 +171,7 @@ def plot_obs(folder, finfos, parameters, xparam, tag=""):
 
     axs[1].set_xlabel(xtex[xparam])
     axs[1].set_ylabel("")
-    axs[1].legend()
+    #axs[1].legend()
 
     Sq_rod = calc_Sq_discrete_infinite_thin_rod(all_qB[0], parameters[0][0])
     for i in range(len(all_Sq)):
@@ -179,7 +179,7 @@ def plot_obs(folder, finfos, parameters, xparam, tag=""):
     axs[2].loglog(all_qB[0], Sq_rod, "k--", label="rod")
     axs[2].set_xlabel("qB")
     axs[2].set_ylabel("S(qB)")
-    axs[2].legend(title=xtex[xparam], ncol=2)
+    #axs[2].legend(title=xtex[xparam], ncol=2)
 
     all_lam0 = []
     all_alpha = []
@@ -208,15 +208,15 @@ def plot_obs(folder, finfos, parameters, xparam, tag=""):
 
     axs[3].set_xlabel(r"$s/B$")
     axs[3].set_ylabel(r"$\left<\cos{\theta}(s)\right>$")
-    axs[3].legend(title=xtex[xparam], ncol=2)
+    #axs[3].legend(title=xtex[xparam], ncol=2)
 
-    axs[4].loglog(xpar, all_lam0, marker="v", label=r"$\lambda_0$")
+    axs[4].plot(xpar, all_lam0, "-", label=r"$\lambda_0$")
     print("all_lam0", all_lam0)
     print("all_lam1", all_lam1)
     print("all_lam2", all_lam2)
-    axs[4].loglog(xpar, all_lam1, marker="o", label=r"$\lambda_1$")
-    axs[4].loglog(xpar, all_lam2, marker="s", label=r"$\lambda_2$")
-    axs[4].loglog(xpar, all_lam2 / all_alpha, marker="s", label=r"$\lambda_e=\lambda_2/\beta$")
+    axs[4].plot(xpar, all_lam1, "--", label=r"$\lambda_1$")
+    axs[4].plot(xpar, all_lam2, "-.", label=r"$\lambda_2$")
+    axs[4].plot(xpar, all_lam2 / all_alpha, ":", label=r"$\lambda_e=\lambda_2/\beta$")
     axs[4].set_xlabel(xtex[xparam])
     axs[4].set_ylabel(r"persistance length")
     axs[4].legend()

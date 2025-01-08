@@ -27,10 +27,10 @@ charged_polymer::charged_polymer(double L_, Energy_parameter Epar_, bool random_
 
     if (random_Epar)
     {
-        L = 200 + int(200 * rand_uni(gen));
+        L = 500 + int(0 * rand_uni(gen));
         Epar.kappa = 10 + 40 * rand_uni(gen);
-        Epar.A = 10 * rand_uni(gen);
-        Epar.invK = 5 + 25 * rand_uni(gen);
+        Epar.A = 1.0 * rand_uni(gen);
+        Epar.invK = 1.0 + 9.0 * rand_uni(gen);
     }
     else
     {

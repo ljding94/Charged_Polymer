@@ -6,42 +6,72 @@ from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 import os
 from scipy.optimize import curve_fit
 import pickle
-
+from scipy.spatial import cKDTree
 
 def get_all_feature_Sq_data(folder, parameters):
 
-    all_kappa, all_A, all_invK = [], [], []  # energy related
+    all_L, all_kappa, all_A, all_invK = [], [], [], []
     all_R2, all_Rg2 = [], []  # R2, Rg2 related
     all_Sq = []
     qB = []
-    for L, run_num in parameters:
-        filename = f"{folder}/obs_L{L}_random_run{run_num}.csv"
+    for i in range(len(parameters)):
+        run_num = parameters[i][0]
+        filename = f"{folder}/obs_random_run{run_num}.csv"
         if not os.path.exists(filename):
             print(f"File not found: {filename}")
             continue
         data = np.genfromtxt(filename, delimiter=",", skip_header=1)
-        kappa, A, invK = data[0, 2:5]
+        L, kappa, A, invK = data[0, 1:5]
         R2, Rg2 = data[0, 8:10]
 
+        all_L.append(L)
         all_kappa.append(kappa)
         all_A.append(A)
         all_invK.append(invK)
         all_R2.append(R2)
-        all_Rg2.append(Rg2/L)
+        all_Rg2.append(Rg2 / L)
 
         Sq = data[0, 10:]
-        all_Sq.append(np.log(Sq))
+        all_Sq.append(Sq)
         qB = data[2, 10:]
 
-    all_feature = np.array([all_kappa, all_A, all_invK, all_R2, all_Rg2])
-    all_feature_name = ["kappa", "A", "invK", "R2", "Rg2"]
-    all_feature_tex = [r"$\kappa$", "A", r"$1/K$", r"$R^2$", r"$R_g^2/L$"]
+    all_feature = np.array([all_L, all_kappa, all_A, all_invK, all_R2, all_Rg2])
+    all_feature_name = ["L", "kappa", "A", "invK", "R2", "Rg2"]
+    all_feature_tex = [r"L", r"$\kappa$", "A", r"$1/K$", r"$R^2$", r"$R_g^2/L$"]
     all_Sq = np.array(all_Sq)
+    all_Sq = np.log(all_Sq)
     qB = np.array(qB)
     return all_feature.T, all_feature_name, all_feature_tex, all_Sq, qB
 
 
-def calc_svd(folder, parameters):
+def calc_nearest_neighbor_distance(SqV, C):
+
+    # Step 1: Build a k-d tree for efficient neighbor search
+    tree = cKDTree(SqV)  # Use only spatial coordinates (x, y, z)
+    distances, indices = tree.query(SqV, k=2)  # Find nearest neighbors (k=2)
+
+    # Step 2: Compute color differences
+    color_differences = np.abs(C - C[indices[:, 1]])
+
+    # Step 3: Normalize by color range
+    color_min = np.min(C)  # Minimum color value
+    color_max = np.max(C)  # Maximum color value
+    color_range = color_max - color_min  # Range of color values
+
+    # Avoid division by zero if all color values are the same
+    if color_range == 0:
+        normalized_differences = np.zeros_like(color_differences)
+    else:
+        normalized_differences = color_differences / color_range
+
+    # Step 4: Compute average normalized color difference
+    avg_normalized_difference = np.mean(normalized_differences)
+
+    #print("Average Normalized Color Difference (by range):", avg_normalized_difference)
+    return avg_normalized_difference
+
+
+def calc_svd(folder, parameters, note=""):
 
     all_feature, all_feature_name, all_feature_tex, all_Sq, qB = get_all_feature_Sq_data(folder, parameters)
 
@@ -69,20 +99,22 @@ def calc_svd(folder, parameters):
     ax01.set_title("Left Singular Vectors (svd.Vh[0])")
 
     plt.tight_layout()
-    plt.savefig(f"{folder}/svd.png", dpi=300)
-    plt.show()
+    plt.savefig(f"{folder}/svd{note}.png", dpi=300)
+    #plt.show()
     plt.close()
 
     SqV = np.inner(all_Sq, np.transpose(svd.Vh))
     plt.figure()
     fig = plt.figure(figsize=(2 * len(all_feature_name), 8))
-    axs = [fig.add_subplot(2, len(all_feature_name) // 2 + 1, i + 1, projection="3d") for i in range(len(all_feature_name))]
+    axs = [fig.add_subplot(2, len(all_feature_name) // 2, i + 1, projection="3d") for i in range(len(all_feature_name))]
     for i in range(len(all_feature_name)):
-        scatter = axs[i].scatter(SqV[:, 0], SqV[:, 1], SqV[:, 2], c=all_feature[:, i], cmap="jet_r", s=2)
+        scatter = axs[i].scatter(SqV[:, 0], SqV[:, 1], SqV[:, 2], c=all_feature[:, i], cmap="jet_r", s=1)
+        NND = calc_nearest_neighbor_distance(SqV, all_feature[:, i])
+
         axs[i].set_xlabel("V[0]")
         axs[i].set_ylabel("V[1]")
         axs[i].set_zlabel("V[2]")
-        axs[i].set_title(all_feature_tex[i])
+        axs[i].set_title(all_feature_tex[i]+f" NND={NND:.2f}")
         axs[i].set_box_aspect([1, 1, 1])  # Set the aspect ratio of the plot
         # Set the same range for each axis
         max_range = np.array([SqV[:, 0].max() - SqV[:, 0].min(), SqV[:, 1].max() - SqV[:, 1].min(), SqV[:, 2].max() - SqV[:, 2].min()]).max() / 2.0
@@ -96,7 +128,7 @@ def calc_svd(folder, parameters):
         axs[i].view_init(elev=10.0, azim=-30)
 
     plt.tight_layout()
-    plt.savefig(f"{folder}/svd_projection_scatter_plot.png", dpi=300)
+    plt.savefig(f"{folder}/svd_projection_scatter_plot{note}.png", dpi=300)
     plt.show()
     plt.close()
 
@@ -110,7 +142,7 @@ def calc_svd(folder, parameters):
     # save svd projection data
     data = np.column_stack((all_feature, SqV[:, 0], SqV[:, 1], SqV[:, 2]))
     column_names = all_feature_name + ["sqv[0]", "sqv[1]", "sqv[2]"]
-    np.savetxt(f"{folder}/data_svd_projection.txt", data, delimiter=",", header=",".join(column_names), comments="")
+    np.savetxt(f"{folder}/data_svd_projection{note}.txt", data, delimiter=",", header=",".join(column_names), comments="")
 
 
 def calc_Sq_pair_distance_distribution(all_Delta_Sq, max_z, bin_num):
@@ -216,10 +248,11 @@ def GaussianProcess_optimization(folder, parameters_train):
     grid_size = 30
 
     theta_per_feature = {
-        "kappa": (np.logspace(-3, -1, grid_size), np.logspace(-3, 0, grid_size)),
-        "A": (np.logspace(-3, -1, grid_size), np.logspace(-3, 0, grid_size)),
-        "invK": (np.logspace(-3, -1, grid_size), np.logspace(-3, 0, grid_size)),
-        "Rg2": (np.logspace(-1, 1, grid_size), np.logspace(-11, -9, grid_size)),
+        #"L": (np.logspace(-2, 1, grid_size), np.logspace(-5, -2, grid_size)),
+        #"kappa": (np.logspace(-5, -3, grid_size), np.logspace(-6, -3, grid_size)),
+        "A": (np.logspace(-2, 1, grid_size), np.logspace(-1, 2, grid_size)),
+        "invK": (np.logspace(-2, 0, grid_size), np.logspace(-3, -1, grid_size)),
+        #"Rg2": (np.logspace(-1, 1, grid_size), np.logspace(-11, -9, grid_size)),
     }
 
     # feature normalization
@@ -301,7 +334,7 @@ def GaussianProcess_optimization(folder, parameters_train):
 
 
 def read_gp_and_feature_stats(folder):
-    all_feature_names = ["kappa", "A", "invK", "Rg2"]
+    all_feature_names = ["L","kappa", "A", "invK", "Rg2"]
     all_feature_mean = np.genfromtxt(f"{folder}/data_feature_avg_std.txt", delimiter=",", skip_header=1, usecols=1)
     all_feature_std = np.genfromtxt(f"{folder}/data_feature_avg_std.txt", delimiter=",", skip_header=1, usecols=2)
     all_gp_per_feature = {}
