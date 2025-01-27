@@ -119,7 +119,7 @@ def plot_MC_step(filename, finfo, show=False):
 def plot_obs(folder, finfos, parameters, xparam, tag=""):
     xtex = {"L": r"$L$", "kappa": r"$\kappa$", "A": r"$A$", "invK": r"$1/K$"}
 
-    fig, axs = plt.subplots(1, 5, figsize=(15, 3))
+    fig, axs = plt.subplots(1, 6, figsize=(18, 3))
     xpar = []
     all_R2, all_R2_err = [], []
     all_Rg2, all_Rg2_err = [], []
@@ -171,7 +171,7 @@ def plot_obs(folder, finfos, parameters, xparam, tag=""):
 
     axs[1].set_xlabel(xtex[xparam])
     axs[1].set_ylabel("")
-    #axs[1].legend()
+    # axs[1].legend()
 
     Sq_rod = calc_Sq_discrete_infinite_thin_rod(all_qB[0], parameters[0][0])
     for i in range(len(all_Sq)):
@@ -179,22 +179,26 @@ def plot_obs(folder, finfos, parameters, xparam, tag=""):
     axs[2].loglog(all_qB[0], Sq_rod, "k--", label="rod")
     axs[2].set_xlabel("qB")
     axs[2].set_ylabel("S(qB)")
-    #axs[2].legend(title=xtex[xparam], ncol=2)
+    # axs[2].legend(title=xtex[xparam], ncol=2)
 
     all_lam0 = []
     all_alpha = []
     all_lam1 = []
     all_lam2 = []
+    all_chisq0 = []
+    all_chisq1 = []
     for i in range(len(all_tts)):
         # if np.isnan(all_tts[i]).any():
         #    print(f"NaN values found in all_tts[{i}] with parameters: {parameters[i]}")
         L, kappa, A, invK = parameters[i]
         lentts = min(len(all_tts[i]), L - 1)
-        lam0, alpha, lam1, lam2 = get_all_peristence_lengths(all_spB[i][:lentts], all_tts[i][:lentts], invK)
+        lam0, alpha, lam1, lam2, chisq0, chisq1 = get_all_peristence_lengths(all_spB[i][:lentts], all_tts[i][:lentts], invK)
         all_lam0.append(lam0)
         all_alpha.append(alpha)
         all_lam1.append(lam1)
         all_lam2.append(lam2)
+        all_chisq0.append(chisq0)
+        all_chisq1.append(chisq1)
         # axs[2].semilogy(all_spB[i][:20], all_tts[i][:20], "s", mfc="None", label=rf"{xpar[i]}")
         axs[3].plot(all_spB[i], all_tts[i], "s", mfc="None", ms=3, label=rf"{xpar[i]}")
         axs[3].plot(all_spB[i], tts_one_scale(all_spB[i], lam0), "--", color=axs[3].lines[-1].get_color())
@@ -208,7 +212,7 @@ def plot_obs(folder, finfos, parameters, xparam, tag=""):
 
     axs[3].set_xlabel(r"$s/B$")
     axs[3].set_ylabel(r"$\left<\cos{\theta}(s)\right>$")
-    #axs[3].legend(title=xtex[xparam], ncol=2)
+    # axs[3].legend(title=xtex[xparam], ncol=2)
 
     axs[4].plot(xpar, all_lam0, "-", label=r"$\lambda_0$")
     print("all_lam0", all_lam0)
@@ -220,6 +224,12 @@ def plot_obs(folder, finfos, parameters, xparam, tag=""):
     axs[4].set_xlabel(xtex[xparam])
     axs[4].set_ylabel(r"persistance length")
     axs[4].legend()
+
+    axs[5].plot(xpar, all_chisq0, "-", label=r"$\chi^2_0$")
+    axs[5].plot(xpar, all_chisq1, "--", label=r"$\chi^2_1$")
+    axs[5].set_xlabel(xtex[xparam])
+    axs[5].set_ylabel(r"$\chi^2$")
+    axs[5].legend()
 
     plt.tight_layout()
     plt.savefig(f"{folder}/obs_{xparam}{tag}.png")
@@ -239,6 +249,16 @@ def calc_Sq_discrete_infinite_thin_rod(q, L):
     return np.array(Sq)
 
 
+def tts_one_scale(s, lam0):
+    tts = np.exp(-s / lam0)
+    return tts
+
+
+def fit_one_scale_persistence(spB, tts):
+    popt, pcov = curve_fit(tts_one_scale, spB, tts)
+    return popt, pcov
+
+
 def tts_two_scale(s, alpha, lam1, lam2):
     tts = (1 - alpha) * np.exp(-s / lam1) + alpha * np.exp(-s / lam2)
     # tts = 1 - (1 - alpha) * s / lam1 + alpha * (np.exp(-s / lam2) - 1)
@@ -251,33 +271,38 @@ def fit_two_scale_persistence(spB, tts):
     return popt, pcov
 
 
-def tts_one_scale(s, lam0):
-    tts = np.exp(-s / lam0)
-    return tts
-
-
-def fit_one_scale_persistence(spB, tts):
-    popt, pcov = curve_fit(tts_one_scale, spB, tts)
-    return popt, pcov
-
-
 def get_all_peristence_lengths(spB, tts, invK):
-    #spB = spB[:50]
-    #tts = tts[:50]
+    # spB = spB[:50]
+    # tts = tts[:50]
     # fit one scale for invK < 6
     lam0, alpha, lam1, lam2 = np.nan, np.nan, np.nan, np.nan
-    # if invK <= :
-    popt, pcov = fit_one_scale_persistence(spB, tts)
-    lam0 = popt[0]
-    if invK >= 1:
-        popt, pcov = fit_two_scale_persistence(spB, tts)
-        alpha, lam1, lam2 = popt[0], popt[1], popt[2]
-        if lam1 < lam2:
-        #if alpha > 0.5:
-            alpha, lam1, lam2 = 1 - alpha, lam2, lam1
-        # lam1, lam2 = np.max([lam1, lam2]),np.min([lam1, lam2])
-        # lame = lam2 / alpha
-    return lam0, alpha, lam1, lam2
+
+    # one scale fit
+    popt0, pcov0 = fit_one_scale_persistence(spB, tts)
+    lam0 = popt0[0]
+
+    # two scale fit
+    popt1, pcov1 = fit_two_scale_persistence(spB, tts)
+    alpha, lam1, lam2 = popt1[0], popt1[1], popt1[2]
+    if lam1 < lam2:
+        print(f"lam1 < lam2: lam1={lam1}, lam2={lam2}")
+        alpha, lam1, lam2 = 1 - alpha, lam2, lam1
+
+    residuals0 = tts - tts_one_scale(spB, lam0)
+    residuals1 = tts - tts_two_scale(spB, alpha, lam1, lam2)
+
+    # Reduxed Chi-squared
+    #chisq0 = np.sum(residuals0 ** 2) / (len(spB) - len(popt0))
+    #chisq1 = np.sum(residuals1 ** 2) / (len(spB) - len(popt1))
+
+    # RMSE
+    chisq0 = np.sqrt(np.sum(residuals0 ** 2) / len(spB))
+    chisq1 = np.sqrt(np.sum(residuals1 ** 2) / len(spB))
+
+    return lam0, alpha, lam1, lam2, chisq0, chisq1
+
+
+# TODO add fitting goodness measues
 
 
 def plot_R_distribution(filename):

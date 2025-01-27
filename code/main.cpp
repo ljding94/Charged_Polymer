@@ -7,15 +7,6 @@
 #include <filesystem>
 #include "charged_polymer.h"
 
-/*
-plan:
-for various L:
-1. effect of A,K, on persistence length
-2. effect of A,K, on Rg2
-3. effect of A,K, on R2
-4. effect of A,K, on Sq
-*/
-
 int main(int argc, char const *argv[])
 {
     std::clock_t c_start = std::clock();

@@ -8,6 +8,7 @@ analyze/__pycache__
 !plot
 plot/__pycache__
 plot/figures/*
+!data4plot
 !README.md
 !.gitignore
 

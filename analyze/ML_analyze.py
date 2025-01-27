@@ -7,6 +7,8 @@ import os
 from scipy.optimize import curve_fit
 import pickle
 from scipy.spatial import cKDTree
+from plot_analyze import calc_Sq_discrete_infinite_thin_rod
+
 
 def get_all_feature_Sq_data(folder, parameters):
 
@@ -28,18 +30,20 @@ def get_all_feature_Sq_data(folder, parameters):
         all_kappa.append(kappa)
         all_A.append(A)
         all_invK.append(invK)
-        all_R2.append(R2)
-        all_Rg2.append(Rg2 / L)
+        all_R2.append(R2 / L**2)
+        all_Rg2.append(Rg2 / L**2)
 
         Sq = data[0, 10:]
         all_Sq.append(Sq)
         qB = data[2, 10:]
 
+    Sq_rod = calc_Sq_discrete_infinite_thin_rod(qB, int(L))
     all_feature = np.array([all_L, all_kappa, all_A, all_invK, all_R2, all_Rg2])
     all_feature_name = ["L", "kappa", "A", "invK", "R2", "Rg2"]
-    all_feature_tex = [r"L", r"$\kappa$", "A", r"$1/K$", r"$R^2$", r"$R_g^2/L$"]
+    all_feature_tex = [r"L", r"$\kappa$", r"$A$", r"$1/K$", r"$R^2/L^2$", r"$R_g^2/L^2$"]
     all_Sq = np.array(all_Sq)
     all_Sq = np.log(all_Sq)
+    #all_Sq = all_Sq/np.array(Sq_rod)
     qB = np.array(qB)
     return all_feature.T, all_feature_name, all_feature_tex, all_Sq, qB
 
@@ -62,16 +66,16 @@ def calc_nearest_neighbor_distance(SqV, C):
     if color_range == 0:
         normalized_differences = np.zeros_like(color_differences)
     else:
-        normalized_differences = color_differences / color_range
+        normalized_differences = color_differences / color_range * 2
 
     # Step 4: Compute average normalized color difference
     avg_normalized_difference = np.mean(normalized_differences)
 
-    #print("Average Normalized Color Difference (by range):", avg_normalized_difference)
+    # print("Average Normalized Color Difference (by range):", avg_normalized_difference)
     return avg_normalized_difference
 
 
-def calc_svd(folder, parameters, note=""):
+def calc_svd(folder, parameters, use_Vh=None, note="", save_basis=False):
 
     all_feature, all_feature_name, all_feature_tex, all_Sq, qB = get_all_feature_Sq_data(folder, parameters)
 
@@ -92,6 +96,7 @@ def calc_svd(folder, parameters, note=""):
 
     # Subplot for svd.U
     ax01 = plt.subplot(2, 1, 2)
+
     print("np.minimum(svd.Vh[0]), np.maximum(svd.Vh[0])", svd.Vh[0].min(), svd.Vh[0].max())
     ax01.semilogx(qB, svd.Vh[0], "-", markerfacecolor="none", label="svd.Vh[0]")
     ax01.semilogx(qB, svd.Vh[1], "-", markerfacecolor="none", label="svd.Vh[1]")
@@ -100,21 +105,49 @@ def calc_svd(folder, parameters, note=""):
 
     plt.tight_layout()
     plt.savefig(f"{folder}/svd{note}.png", dpi=300)
-    #plt.show()
+    # plt.show()
     plt.close()
 
-    SqV = np.inner(all_Sq, np.transpose(svd.Vh))
+    # save these analyzed data for further easy plotting
+    # svd data
+    #VhT = np.transpose(svd.Vh)
+    if save_basis:
+        data = np.column_stack((qB.flatten(), svd.S, svd.Vh[0], svd.Vh[1], svd.Vh[2]))
+        column_names = ["qB", "svd.S", "svd.Vh[0]", "svd.Vh[1]", "svd.Vh[2]"]
+        np.savetxt(f"{folder}/data_svd{note}.txt", data, delimiter=",", header=",".join(column_names), comments="")
+
+    # Check if svd.Vh is symmetric
+    #is_symmetric = np.allclose(svd.Vh, svd.Vh.T, atol=1e-8)
+    #print("Is svd.Vh symmetric?", is_symmetric)
+    #print("svd.Vh[0],svd.Vh.T[0]",svd.Vh[0],svd.Vh.T[0])
+    if use_Vh is not None:
+        SqV = np.dot(all_Sq, np.transpose(use_Vh))
+        #SqV = np.inner(all_Sq, use_Vh)
+    else:
+        SqV = np.dot(all_Sq, np.transpose(svd.Vh))
+        #SqV = np.inner(all_Sq, svd.Vh)
+    print("SqV shape:", SqV.shape)
+    print("len(SqV[:,0])", len(SqV[:,0]))
+    print("svd.Vh shape", np.array(svd.Vh).shape)
+    print("all_Sq shape", np.array(all_Sq).shape)
+    print("np.inner(all_Sq[0],svdVh[0])", np.inner(all_Sq[0], svd.Vh[0]))
+    print("np.inner(all_Sq[0], np.transpose(svdVh[0]))", np.inner(all_Sq[0], np.transpose(svd.Vh)[0]))
+    print("np.dot(all_Sq, np.transpose(svdVh))[0,0]", np.dot(all_Sq, np.transpose(svd.Vh)[0,0]))
+    #print("all_Sq[0]", all_Sq[0])
+    #print("SqV[0]", SqV[0])
     plt.figure()
     fig = plt.figure(figsize=(2 * len(all_feature_name), 8))
     axs = [fig.add_subplot(2, len(all_feature_name) // 2, i + 1, projection="3d") for i in range(len(all_feature_name))]
     for i in range(len(all_feature_name)):
+        #scatter = axs[i].scatter(SqV[:, 0], SqV[:, 1], SqV[:, 2], c=all_feature[:, i], cmap="jet_r", s=1)
+
         scatter = axs[i].scatter(SqV[:, 0], SqV[:, 1], SqV[:, 2], c=all_feature[:, i], cmap="jet_r", s=1)
         NND = calc_nearest_neighbor_distance(SqV, all_feature[:, i])
 
         axs[i].set_xlabel("V[0]")
         axs[i].set_ylabel("V[1]")
         axs[i].set_zlabel("V[2]")
-        axs[i].set_title(all_feature_tex[i]+f" NND={NND:.2f}")
+        axs[i].set_title(all_feature_tex[i] + f" NND={NND:.2f}")
         axs[i].set_box_aspect([1, 1, 1])  # Set the aspect ratio of the plot
         # Set the same range for each axis
         max_range = np.array([SqV[:, 0].max() - SqV[:, 0].min(), SqV[:, 1].max() - SqV[:, 1].min(), SqV[:, 2].max() - SqV[:, 2].min()]).max() / 2.0
@@ -132,17 +165,47 @@ def calc_svd(folder, parameters, note=""):
     plt.show()
     plt.close()
 
-    # save these analyzed data for further easy plotting
-    # svd data
-    # data = np.column_stack((qBx.flatten(), svd.S, svd.Vh[0], svd.Vh[1], svd.Vh[2]))
-    # column_names = ['qB', 'svd.S', 'svd.Vh[0]', 'svd.Vh[1]', 'svd.Vh[2]']
-    # np.savetxt(f"{folder}/data_L{L}_svd.txt", data, delimiter=',', header=','.join(column_names), comments='')
-
     #  svd projection data
     # save svd projection data
     data = np.column_stack((all_feature, SqV[:, 0], SqV[:, 1], SqV[:, 2]))
     column_names = all_feature_name + ["sqv[0]", "sqv[1]", "sqv[2]"]
     np.savetxt(f"{folder}/data_svd_projection{note}.txt", data, delimiter=",", header=",".join(column_names), comments="")
+
+    return svd.Vh
+
+
+def NND_analysis(folder, invKs, parameter_slices, use_Vh):
+    NNDs = []
+    for i in range(len(invKs)):
+        invK = invKs[i]
+        parameters = parameter_slices[i]
+        all_feature, all_feature_name, all_feature_tex, all_Sq, qB = get_all_feature_Sq_data(folder, parameters)
+        SqV = np.inner(all_Sq, np.transpose(use_Vh))
+        NND = []
+        for i in range(len(all_feature_name)):
+            NND.append(calc_nearest_neighbor_distance(SqV, all_feature[:, i]))
+        NNDs.append(NND)
+
+    NNDs = np.array(NNDs)
+    plt.figure()
+    fig = plt.figure(figsize=(6, 6))
+    ax = fig.add_subplot(1, 1, 1)
+    for i in range(len(all_feature_name)):
+        ax.plot(invKs, NNDs[:, i], "-o", label=all_feature_tex[i])
+    ax.set_xlabel(r"$1/K$")
+    ax.set_ylabel("NND")
+    ax.set_title("Nearest Neighbor Distance")
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig(f"{folder}/NND_analysis.png", dpi=300)
+    plt.show()
+    plt.close()
+    # save NND data
+    data = np.column_stack((invKs, NNDs))
+    column_names = ["invK", *all_feature_name]
+    np.savetxt(f"{folder}/data_NND_analysis.txt", data, delimiter=",", header=",".join(column_names), comments="")
+
+
 
 
 def calc_Sq_pair_distance_distribution(all_Delta_Sq, max_z, bin_num):
@@ -243,16 +306,17 @@ def plot_pddf_acf(folder, parameters, max_z=2, n_bin=100):
     np.savetxt(f"{folder}/data_pddf_acf.txt", data, delimiter=",", header=",".join(column_names), comments="")
 
 
-def GaussianProcess_optimization(folder, parameters_train):
+def GaussianProcess_optimization(folder, parameters_train, feature_to_train, note=""):
     all_feature, all_feature_name, all_feature_tex, all_Sq, qB = get_all_feature_Sq_data(folder, parameters_train)
     grid_size = 30
 
     theta_per_feature = {
-        #"L": (np.logspace(-2, 1, grid_size), np.logspace(-5, -2, grid_size)),
-        #"kappa": (np.logspace(-5, -3, grid_size), np.logspace(-6, -3, grid_size)),
-        "A": (np.logspace(-2, 1, grid_size), np.logspace(-1, 2, grid_size)),
-        "invK": (np.logspace(-2, 0, grid_size), np.logspace(-3, -1, grid_size)),
-        #"Rg2": (np.logspace(-1, 1, grid_size), np.logspace(-11, -9, grid_size)),
+        # "L": (np.logspace(-2, 1, grid_size), np.logspace(-5, -2, grid_size)),
+        "kappa": (np.logspace(-2, 0, grid_size), np.logspace(-4, -2, grid_size)),
+        "A": (np.logspace(-2, 0, grid_size), np.logspace(-2, 0 , grid_size)),
+        #"invK": (np.logspace(-2, 0, grid_size), np.logspace(-3, -1, grid_size)),
+        "R2": (np.logspace(-1, 1, grid_size), np.logspace(-5, -3, grid_size)),
+        "Rg2": (np.logspace(0, 1, grid_size), np.logspace(-11, -10, grid_size)),
     }
 
     # feature normalization
@@ -263,7 +327,7 @@ def GaussianProcess_optimization(folder, parameters_train):
     plt.figure()
     fig, axs = plt.subplots(1, len(all_feature_name), figsize=(6 * len(all_feature_name), 6))
     for feature_name, (theta0, theta1) in theta_per_feature.items():
-        if feature_name not in all_feature_name:
+        if feature_name not in feature_to_train:
             continue
         print("training: ", feature_name)
         feature_index = all_feature_name.index(feature_name)
@@ -315,17 +379,17 @@ def GaussianProcess_optimization(folder, parameters_train):
 
         data = np.column_stack(([gp_theta[0]] * len(theta0), [gp_theta[1]] * len(theta1), theta0, theta1, np.array(LML).T))
         column_names = ["gp_theta0", "gp_theta1", "theta0", "theta1", "LML"]
-        np.savetxt(f"{folder}/data_{feature_name}_LML.txt", data, delimiter=",", header=",".join(column_names), comments="")
+        np.savetxt(f"{folder}/data_{feature_name}_LML{note}.txt", data, delimiter=",", header=",".join(column_names), comments="")
         with open(f"{folder}/gp_{feature_name}.pkl", "wb") as f:
             pickle.dump(gp, f)
 
     # Save average and standard deviation per feature
     avg_std_data = np.column_stack((all_feature_name, all_feature_mean, all_feature_std))
     column_names = ["Feature", "Mean", "Std"]
-    np.savetxt(f"{folder}/data_feature_avg_std.txt", avg_std_data, delimiter=",", header=",".join(column_names), comments="", fmt="%s")
+    np.savetxt(f"{folder}/data_feature_avg_std{note}.txt", avg_std_data, delimiter=",", header=",".join(column_names), comments="", fmt="%s")
 
     plt.tight_layout()
-    plt.savefig(f"{folder}/LML_subplots.png", dpi=300)
+    plt.savefig(f"{folder}/LML_subplots{note}.png", dpi=300)
     # plt.show()
     plt.close()
 
@@ -333,10 +397,10 @@ def GaussianProcess_optimization(folder, parameters_train):
     return all_feature_mean, all_feature_std, all_gp_per_feature
 
 
-def read_gp_and_feature_stats(folder):
-    all_feature_names = ["L","kappa", "A", "invK", "Rg2"]
-    all_feature_mean = np.genfromtxt(f"{folder}/data_feature_avg_std.txt", delimiter=",", skip_header=1, usecols=1)
-    all_feature_std = np.genfromtxt(f"{folder}/data_feature_avg_std.txt", delimiter=",", skip_header=1, usecols=2)
+def read_gp_and_feature_stats(folder, note=""):
+    all_feature_names = ["L", "kappa", "A", "invK", "R2", "Rg2"]
+    all_feature_mean = np.genfromtxt(f"{folder}/data_feature_avg_std{note}.txt", delimiter=",", skip_header=1, usecols=1)
+    all_feature_std = np.genfromtxt(f"{folder}/data_feature_avg_std{note}.txt", delimiter=",", skip_header=1, usecols=2)
     all_gp_per_feature = {}
     for feature_name in all_feature_names:
         if os.path.exists(f"{folder}/gp_{feature_name}.pkl"):
@@ -345,13 +409,15 @@ def read_gp_and_feature_stats(folder):
     return all_feature_names, all_feature_mean, all_feature_std, all_gp_per_feature
 
 
-def GaussianProcess_prediction(folder, parameters_test, all_feature_mean, all_feature_std, all_gp_per_feature):
+def GaussianProcess_prediction(folder, parameters_test, all_feature_mean, all_feature_std, all_gp_per_feature, feature_to_test, note=""):
     all_feature, all_feature_name, all_feature_tex, all_Sq, qB = get_all_feature_Sq_data(folder, parameters_test)
 
     plt.figure()
 
     fig, axs = plt.subplots(1, len(all_feature_name), figsize=(6 * len(all_feature_name), 6))
     for feature_name, gp in all_gp_per_feature.items():
+        if feature_name not in feature_to_test:
+            continue
         feature_index = all_feature_name.index(feature_name)
         Y = all_feature[:, feature_index]
 
@@ -381,9 +447,9 @@ def GaussianProcess_prediction(folder, parameters_test, all_feature_mean, all_fe
         # save data to file
         data = np.column_stack((Y, Y_predict, Y_predict_err))
         column_names = [feature_name, "ML predicted", "ML predicted uncertainty"]
-        np.savetxt(f"{folder}/data_{feature_name}_prediction.txt", data, delimiter=",", header=",".join(column_names), comments="")
+        np.savetxt(f"{folder}/data_{feature_name}_prediction{note}.txt", data, delimiter=",", header=",".join(column_names), comments="")
 
-    plt.savefig(f"{folder}/prediction.png", dpi=300)
+    plt.savefig(f"{folder}/prediction{note}.png", dpi=300)
     plt.close()
 
 
