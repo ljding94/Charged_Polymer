@@ -40,6 +40,20 @@ This project simulates charged polymer chains and provides tools for analyzing t
   - SciPy
   - Other standard libraries (os, time, etc.)
 
+
+## Requirements
+
+- **C++ Compiler:**
+  A C++ compiler supporting C++17 is required to build and run the simulation.
+
+- **Python:**
+  Python 3 is required along with the following packages:
+  - [NumPy](https://numpy.org/)
+  - [Matplotlib](https://matplotlib.org/)
+  - [SciPy](https://www.scipy.org/)
+  - Other standard libraries (os, time, etc.)
+
+
 ## Compilation and Running the Simulation
 
 ### Build the Simulation
