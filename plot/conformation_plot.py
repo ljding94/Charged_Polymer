@@ -162,36 +162,55 @@ def plot_configuration(tex_lw=240.71031, ppi=72):
     ax0 = plt.subplot2grid((1, 2), (0, 0))
     ax0f = plt.subplot2grid((1, 2), (0, 0), zorder=-1)
     ax1 = plt.subplot2grid((1, 2), (0, 1))
+    ax1f = plt.subplot2grid((1, 2), (0, 1), zorder=-1)
     shift = 700
 
     # kappa vs invK
     kappas = [10, 30, 50]
     invKs = [3, 5, 9]
 
-    ax0f.set_xlim(0, len(invKs))
-    ax0f.set_xticks(np.linspace(1, len(invKs), len(invKs)) - 0.5)
-    ax0f.set_xticklabels([rf"{invKs[i]:.0f}" for i in range(len(invKs))])
-    ax0f.set_ylim(0, len(kappas))
-    ax0f.set_yticks(np.linspace(1, len(kappas), len(kappas)) - 0.5)
-    ax0f.set_yticklabels([rf"{kappas[i]:.0f}" for i in range(len(kappas))])
+    ax0f.set_ylim(0, len(invKs))
+    ax0f.set_yticks(np.linspace(1, len(invKs), len(invKs)) - 0.5)
+    ax0f.set_yticklabels([rf"{invKs[i]:.0f}" for i in range(len(invKs))])
+    ax0f.set_ylabel(r"$\lambda_D$", fontsize=9, labelpad=0)
+
+    ax0f.tick_params(which="both", direction="in", top="on", right="on", labelbottom=True, labelleft=True, labelsize=7)
+    ax0f.set_xlim(0, len(kappas))
+    ax0f.set_xticks(np.linspace(1, len(kappas), len(kappas)) - 0.5)
+    ax0f.set_xticklabels([rf"{kappas[i]:.0f}" for i in range(len(kappas))])
+    ax0f.set_xlabel(r"$\kappa$", fontsize=9, labelpad=0)
     ax0f.set_title(r"$A=9$", fontsize=9)
     ax0f.set_aspect("equal")
 
-    for i in range(len(kappas)):
-        for j in range(len(invKs)):
+    for j in range(len(kappas)):
+        for i in range(len(invKs)):
             pass
             ax_plot_multi_config_data(ax0, "../data/20250118_cfg", 500, kappas[i], 9, invKs[j], xshift=i * shift, yshift=j * shift)
     ax0.set_axis_off()
     # ax0.set_xlim(-shift*0.25, (len(invKs)-0.5) * shift)
     # A vs invK
     As = [1, 3, 7]
-    # shift = 600
-    for i in range(len(As)):
-        for j in range(len(invKs)):
+
+
+    ax1f.set_ylim(0, len(invKs))
+    ax1f.set_yticks(np.linspace(1, len(invKs), len(invKs)) - 0.5)
+    ax1f.set_yticklabels([rf"{invKs[i]:.0f}" for i in range(len(invKs))])
+    ax1f.set_ylabel(r"$\lambda_D$", fontsize=9, labelpad=0)
+
+    ax1f.tick_params(which="both", direction="in", top="on", right="on", labelbottom=True, labelleft=True, labelsize=7)
+    ax1f.set_xlim(0, len(As))
+    ax1f.set_xticks(np.linspace(1, len(As), len(As)) - 0.5)
+    ax1f.set_xticklabels([rf"{As[i]:.0f}" for i in range(len(As))])
+    ax1f.set_xlabel(r"$A$", fontsize=9, labelpad=0)
+    ax1f.set_title(r"$\kappa=30$", fontsize=9)
+    ax1f.set_aspect("equal")
+
+    for j in range(len(As)):
+        for i in range(len(invKs)):
             ax_plot_multi_config_data(ax1, "../data/20250118_cfg", 500, 30, As[i], invKs[j], xshift=i * shift, yshift=j * shift)
     ax1.set_axis_off()
 
-    plt.tight_layout(pad=0.1)
+    plt.tight_layout(pad=1)
     plt.savefig("./figures/configuration.pdf", format="pdf")
     plt.savefig("./figures/configuration.png", dpi=300)
     plt.show()

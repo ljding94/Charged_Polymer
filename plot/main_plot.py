@@ -6,10 +6,10 @@ from ML_Sq_plot import *
 def main():
 
     # 1. mechanical response: R2, Rg, and configurations
-    plot_conformation_kappa_A()
+    #plot_conformation_kappa_A()
 
     # maybe not really need this
-    #plot_configuration()
+    plot_configuration()
 
     # 2. two length scale analysis: two way of fitting tangent correlation and variation versus invK(lam_D) for kappa and L, maybe add A later?
     #plot_two_length_scale()
